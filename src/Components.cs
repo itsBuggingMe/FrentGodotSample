@@ -43,13 +43,13 @@ internal struct Location
     public static implicit operator Location(Vector2 l) => new() { Value = l };
 }
 
-internal struct Velocity : IUniformComponent<Delta, PaddedTransform2D>
+internal struct Velocity : IUniformComponent<float, PaddedTransform2D>
 {
     public Vector2 Value;
 
-    public void Update(Delta uniform, ref PaddedTransform2D arg)
+    public void Update(float dt, ref PaddedTransform2D arg)
     {
-        var delta = Value * uniform.Time;
+        var delta = Value * dt;
         arg.OriginX += delta.X;
         arg.OriginY += delta.Y;
     }

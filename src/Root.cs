@@ -6,29 +6,18 @@ using FrentGodotSample;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-public partial class Root : Node
+public partial class Root : Node, IUniformProvider
 {
+    private int _entityCount = 500_000;
+
+    [Export]
     public int EntityCount
     {
-        get;
+        get => _entityCount;
         set
         {
-            int delta = value - field;
-            if (delta == 0)
-                return;
-
-            _childMesh.InstanceCount = field = value;
-
-            if (delta > 0)
-            {
-                for (int i = 0; i < delta; i++)
-                    _entities.Push(CreateEntity());
-            }
-            else
-            {
-                for (int i = 0; i < -delta; i++)
-                    _entities.Pop().Delete();
-            }
+            _entityCount = value;
+            EnsureEntityCount(value);
         }
     }
 
@@ -36,19 +25,16 @@ public partial class Root : Node
 
     private MultiMesh _childMesh;
     private World _world;
-    private DefaultUniformProvider _uniforms;
-    private Delta _dt;
+
+    private float _deltaTime;
 
     public override void _Ready()
     {
         _entities = [];
-        _dt = new();
-        _uniforms = new();
-        _world = new World(_uniforms);
+        _world = new World(this);
         _childMesh = GetChild<MultiMeshInstance2D>(0).Multimesh;
-        _uniforms.Add(_dt);
 
-        EntityCount = 500_000;
+        EnsureEntityCount(EntityCount);
 
         base._Ready();
     }
@@ -57,7 +43,7 @@ public partial class Root : Node
     {
         GD.Print($"FPS: {1 / delta}");
 
-        _dt.Time = (float)delta;
+        _deltaTime = (float)delta;
 
         _world.Update();
 
@@ -93,28 +79,30 @@ public partial class Root : Node
             Span<Velocity> velocities = vels[..locs.Length];
             for (int i = 0; i < locs.Length; i++)
             {
-                var currentLoc = new Vector2(locs[i].OriginX, locs[i].OriginY);
-                if (currentLoc.X < tl.X)
+                ref float x = ref locs[i].OriginX;
+                ref float y = ref locs[i].OriginY;
+
+                if (x < tl.X)
                 {
-                    currentLoc.X = tl.X;
+                    x = tl.X;
                     velocities[i].Value.X *= -1;
                 }
 
-                if (currentLoc.Y < tl.Y)
+                if (y < tl.Y)
                 {
-                    currentLoc.Y = tl.Y;
+                    y = tl.Y;
                     velocities[i].Value.Y *= -1;
                 }
 
-                if (currentLoc.X > br.X)
+                if (x > br.X)
                 {
-                    currentLoc.X = br.X;
+                    x = br.X;
                     velocities[i].Value.X *= -1;
                 }
 
-                if (currentLoc.Y > br.Y)
+                if (y > br.Y)
                 {
-                    currentLoc.Y = br.Y;
+                    y = br.Y;
                     velocities[i].Value.Y *= -1;
                 }
             }
@@ -135,13 +123,27 @@ public partial class Root : Node
             );
     }
 
+    private void EnsureEntityCount(int count)
+    {
+        int delta = count - _entities.Count;
+        _childMesh.InstanceCount = count;
+
+        if (delta > 0)
+        {
+            for (int i = 0; i < delta; i++)
+                _entities.Push(CreateEntity());
+        }
+        else
+        {
+            for (int i = 0; i < -delta; i++)
+                _entities.Pop().Delete();
+        }
+    }
+
     private float RandomRange(float range)
     {
         return (Random.Shared.NextSingle() - 0.5f) * range;
     }
-}
 
-internal class Delta
-{
-    public float Time;
+    public T GetUniform<T>() => typeof(T) == typeof(float) ? (T)(object)_deltaTime : throw new NotSupportedException();
 }

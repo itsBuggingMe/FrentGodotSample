@@ -15,6 +15,7 @@ buffer = PackedFloat32Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 [node name="Node" type="Node"]
 script = ExtResource("1_uu6xs")
+EntityCount = 100
 
 [node name="MultiMeshInstance2D" type="MultiMeshInstance2D" parent="."]
 material = SubResource("CanvasItemMaterial_uu6xs")
